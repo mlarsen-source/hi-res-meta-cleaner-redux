@@ -152,12 +152,12 @@ conflicts (duplicate filename). Never return 500 for expected error conditions.
 
 On-demand workflows for recurring tasks. Invoke explicitly — they do not run automatically.
 
-| Workflow | What it does |
-|---|---|
-| [code-quality-review.md](docs/code-quality-review.md) | Reviews implementation correctness, conventions, and test coverage gaps |
-| [test-suite-quality-review.md](docs/test-suite-quality-review.md) | Reviews test simplicity, readability, and scope |
-| [feature-implementation-planning.md](docs/feature-implementation-planning.md) | Produces a structured plan before code is written |
-| [pr-description.md](docs/pr-description.md) | Generates PR-ready description text from the final diff |
+| Workflow                                                                      | What it does                                                            |
+| ----------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| [code-quality-review.md](docs/code-quality-review.md)                         | Reviews implementation correctness, conventions, and test coverage gaps |
+| [test-suite-quality-review.md](docs/test-suite-quality-review.md)             | Reviews test simplicity, readability, and scope                         |
+| [feature-implementation-planning.md](docs/feature-implementation-planning.md) | Produces a structured plan before code is written                       |
+| [pr-description.md](docs/pr-description.md)                                   | Generates PR-ready description text from the final diff                 |
 
 ### How to invoke
 
