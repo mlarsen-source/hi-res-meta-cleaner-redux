@@ -1,4 +1,4 @@
-# PR Description Generator
+# PR Description
 
 ## Purpose
 
@@ -11,7 +11,7 @@ visible in the final diff.
 
 ---
 
-## Context isolation (must happen first)
+## Preparation — context isolation (must happen first)
 
 This workflow operates on the final diff only. Prior conversation, earlier commits, or
 approaches that were tried and abandoned must not influence the output. PR reviewers see only
@@ -30,7 +30,7 @@ _"Re-fetching the final diff against main and ignoring prior conversation contex
 
 ---
 
-## Pre-generation phase
+## Pre-generation checks
 
 Before producing any output, complete this phase. Structure: **explain → run → report → confirm**.
 
@@ -68,7 +68,7 @@ If no issues were detected: _"Are there any GitHub issues to link, or should thi
 
 ---
 
-## Strict rules
+## Rules
 
 - Use only the final diff between the current branch and `main`
 - Do not mention anything added and later removed — reviewers only see the final diff
@@ -83,7 +83,7 @@ If no issues were detected: _"Are there any GitHub issues to link, or should thi
 
 ---
 
-## Required output format
+## Output
 
 ```md
 ## PR title
@@ -127,7 +127,7 @@ type: Short descriptive title
 
 ---
 
-## Formatting requirements
+## Formatting
 
 ### PR title
 
@@ -201,7 +201,7 @@ Rules:
 
 ---
 
-## Do not
+## Constraints
 
 - Do not include text before or after the code block in the final output
 - Do not generate output before completing the pre-generation phase and receiving confirmation

@@ -1,4 +1,4 @@
-# Code Quality Review
+# Code Review
 
 ## Purpose
 
@@ -10,9 +10,9 @@ independently.
 
 ---
 
-## Before review
+## Preparation
 
-- Read `agents.md` to load project conventions, architecture constraints, and hard rules.
+- Read `AGENTS.md` to load project conventions, architecture constraints, and hard rules.
 - Run `git diff --name-only origin/main...HEAD` to enumerate changed files.
 - Read all changed files and their direct importers one level deep.
 - Identify existing patterns in adjacent files before flagging inconsistencies.
@@ -65,7 +65,7 @@ Check for:
 
 ### 3. Convention compliance
 
-Check changed code against `agents.md` conventions, specifically:
+Check changed code against `AGENTS.md` conventions, specifically:
 
 - Inline DB queries in Route Handlers instead of going through the model layer
 - Missing `authenticateRequest` call at the top of protected Route Handlers
@@ -79,7 +79,7 @@ Check changed code against `agents.md` conventions, specifically:
 **Decision rule:** Flag if the code violates a documented convention, even if it works
 correctly.
 
-### 4. Sequelize and database patterns
+### 4. Database patterns
 
 Run this section whenever the diff touches `app/lib/db/` or any Route Handler that calls
 Sequelize directly.
@@ -98,7 +98,7 @@ Check for:
 
 **Decision rule:** Each check above is a correctness requirement. Flag every failure.
 
-### 5. Route Handler security
+### 5. Security
 
 Run this section whenever the diff contains a new or modified file under `app/api/`.
 
@@ -108,7 +108,7 @@ Check for:
   effect — an auth check after a DB read is a defect even if it eventually blocks the request
 - All request body fields validated before use — unvalidated strings passed to DB queries or
   file paths are injection vectors
-- Response status codes match `agents.md` conventions (400, 401, 404, 409 — never 500 for
+- Response status codes match `AGENTS.md` conventions (400, 401, 404, 409 — never 500 for
   expected errors)
 - `Set-Cookie` headers use the `NextResponse` pattern, not `next/headers` cookies()
 - File uploads: MIME type and size validated before writing to disk
@@ -157,7 +157,7 @@ State pass / fail / not run (with reason) for each.
 
 ---
 
-## Required output format
+## Output
 
 ### Context
 
