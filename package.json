@@ -16,7 +16,7 @@
     "cy:open": "cypress open",
     "cy:run": "cypress run",
     "test:e2e": "start-server-and-test dev http://localhost:3000 cy:run",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "dependencies": {
     "archiver": "^8.0.0",
