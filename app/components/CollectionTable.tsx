@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { FileRow } from "./FileRow";
-import { fetchWithAuth } from "@/app/lib/client/fetchWithAuth";
 import type { AudioFileRecord } from "@/app/types/audio";
 
 type SortKey = "original_filename" | "title" | "artist" | "album" | "year";
@@ -25,48 +24,6 @@ interface CollectionTableProps {
 export function CollectionTable({ files, onFileUpdated }: CollectionTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>("original_filename");
   const [sortAsc, setSortAsc] = useState(true);
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const [downloading, setDownloading] = useState(false);
-
-  const allSelected = files.length > 0 && selectedIds.size === files.length;
-
-  function toggleSelect(id: number, checked: boolean) {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (checked) next.add(id);
-      else next.delete(id);
-      return next;
-    });
-  }
-
-  function toggleAll() {
-    if (allSelected) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(files.map((f) => f.file_id)));
-    }
-  }
-
-  async function downloadSelected() {
-    setDownloading(true);
-    try {
-      const res = await fetchWithAuth("/api/download", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fileIds: [...selectedIds] }),
-      });
-      if (!res.ok) return;
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "audio-files.zip";
-      a.click();
-      URL.revokeObjectURL(url);
-    } finally {
-      setDownloading(false);
-    }
-  }
 
   function getValue(file: AudioFileRecord, key: SortKey): string {
     if (key === "original_filename") return file.original_filename.toLowerCase();
@@ -99,59 +56,29 @@ export function CollectionTable({ files, onFileUpdated }: CollectionTableProps) 
   }
 
   return (
-    <div>
-      <div className="flex justify-end mb-2">
-        <button
-          onClick={downloadSelected}
-          disabled={selectedIds.size === 0 || downloading}
-          className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
-          data-testid="download-button"
-        >
-          {downloading
-            ? "Preparing…"
-            : selectedIds.size > 0
-              ? `Download (${selectedIds.size})`
-              : "Download"}
-        </button>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse" data-testid="collection-table">
-          <thead>
-            <tr className="border-b border-gray-200 bg-gray-50">
-              <th className="px-3 py-2">
-                <input
-                  type="checkbox"
-                  checked={allSelected}
-                  onChange={toggleAll}
-                  data-testid="select-all-checkbox"
-                />
-              </th>
-              {HEADERS.map(({ key, label }) => (
-                <th
-                  key={label}
-                  onClick={() => onHeaderClick(key)}
-                  className={`px-3 py-2 text-xs font-semibold text-gray-600 uppercase tracking-wide
+    <div className="overflow-x-auto">
+      <table className="w-full text-left border-collapse" data-testid="collection-table">
+        <thead>
+          <tr className="border-b border-gray-200 bg-gray-50">
+            {HEADERS.map(({ key, label }) => (
+              <th
+                key={label}
+                onClick={() => onHeaderClick(key)}
+                className={`px-3 py-2 text-xs font-semibold text-gray-600 uppercase tracking-wide
                   ${key ? "cursor-pointer hover:text-blue-600 select-none" : ""}`}
-                >
-                  {label}
-                  {key === sortKey && <span className="ml-1">{sortAsc ? "↑" : "↓"}</span>}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map((file) => (
-              <FileRow
-                key={file.file_id}
-                file={file}
-                onUpdated={onFileUpdated}
-                selected={selectedIds.has(file.file_id)}
-                onSelect={toggleSelect}
-              />
+              >
+                {label}
+                {key === sortKey && <span className="ml-1">{sortAsc ? "↑" : "↓"}</span>}
+              </th>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((file) => (
+            <FileRow key={file.file_id} file={file} onUpdated={onFileUpdated} />
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

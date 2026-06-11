@@ -19,11 +19,9 @@ const COLUMNS: { key: ColumnKey; label: string }[] = [
 interface FileRowProps {
   file: AudioFileRecord;
   onUpdated: (updated: AudioFileRecord) => void;
-  selected: boolean;
-  onSelect: (id: number, checked: boolean) => void;
 }
 
-export function FileRow({ file, onUpdated, selected, onSelect }: FileRowProps) {
+export function FileRow({ file, onUpdated }: FileRowProps) {
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [saving, setSaving] = useState(false);
@@ -99,14 +97,6 @@ export function FileRow({ file, onUpdated, selected, onSelect }: FileRowProps) {
 
   return (
     <tr className="border-b border-gray-100 hover:bg-gray-50">
-      <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
-        <input
-          type="checkbox"
-          checked={selected}
-          onChange={(e) => onSelect(file.file_id, e.target.checked)}
-          data-testid={`checkbox-${file.file_id}`}
-        />
-      </td>
       {COLUMNS.map(({ key }) => (
         <td
           key={key}

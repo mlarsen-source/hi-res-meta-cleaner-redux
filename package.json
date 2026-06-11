@@ -19,7 +19,7 @@
     "prepare": "husky || true"
   },
   "dependencies": {
-    "archiver": "^6.0.2",
+    "archiver": "^8.0.0",
     "bcrypt": "^6.0.0",
     "jsonwebtoken": "^9.0.3",
     "music-metadata": "^11.13.0",

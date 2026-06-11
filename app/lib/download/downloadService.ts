@@ -1,7 +1,8 @@
 import archiver from "archiver";
 import fs from "fs";
 import path from "path";
-import { AudioFile, Metadata } from "../db/models";
+import { AudioFile } from "../db/models/AudioFile";
+import { Metadata } from "../db/models/Metadata";
 import { Op } from "sequelize";
 import { writeMetadataToFile } from "../metadata/writeMetadata";
 
