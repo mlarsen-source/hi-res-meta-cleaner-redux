@@ -1,8 +1,12 @@
 # Hi-Res Meta Cleaner Redux — Agent Reference
 
+Hi-Res Meta Cleaner Redux is a Next.js web application for uploading, managing, and editing
+metadata tags on high-resolution audio files. Users upload audio files, edit tags inline in a
+sortable table, and export cleaned files as a ZIP archive with updated metadata written back
+into the file headers.
+
 This file is the authoritative, agent-neutral reference for this codebase. Read it before
-starting any work. It covers commands, project layout, architecture constraints, conventions,
-and known tricky areas. The `docs/` directory contains on-demand workflow documents.
+starting any work. The `docs/` directory contains on-demand workflow documents.
 
 ---
 
@@ -62,7 +66,7 @@ temp/                Temp files during ZIP download (git-ignored, created at run
 
 ---
 
-## Architecture Decisions and Constraints
+## Architecture Constraints
 
 ### Sequelize in Next.js dev mode
 
@@ -87,21 +91,28 @@ in Route Handlers — it is for Server Components.
 
 ### Authentication
 
-Every protected route handler calls `authenticateRequest(request)` at the top. If
-`isAuthError(result)` is true, return the error response immediately. If
-`result.newAccessCookie` is set, include it in the response `Set-Cookie` header (silent
-refresh of expired access token).
+Every protected route handler must call `authenticateRequest(request)` as its first operation,
+before any data access or side effect. If `isAuthError(result)` is true, return the error
+response immediately. If `result.newAccessCookie` is set, include it in the response
+`Set-Cookie` header (silent refresh of expired access token).
 
-### node-id3 for metadata write
+### Database security
+
+All queries on tables with per-user data must scope by `user_id`. Never interpolate user-
+supplied values into SQL strings — use parameterized queries or Sequelize operators. Multi-step
+writes (file + DB row + metadata row) require a transaction; on any failure, clean up all disk
+files written in the same request before returning the error.
+
+### Metadata write (node-id3)
 
 Only writes ID3v2 (MP3). For non-MP3 files, `writeMetadata.ts` copies the file unchanged. The
-stored `type` field in the metadata table is used to decide. Do not re-encode audio.
+stored `type` field in the metadata table decides the code path. Do not re-encode audio.
 
-### Validation
+### Validation and error responses
 
-All request bodies are validated inside the route handler before touching the database or disk.
-Return 400 for bad input, 401 for auth failures, 404 for not-found (own resource), 409 for
-conflicts (duplicate filename). Never return 500 for expected error conditions.
+Validate all request bodies before touching the database or disk. Return 400 for bad input,
+401 for auth failures, 404 for not-found (own resource), 409 for conflicts (duplicate
+filename). Never return 500 for expected error conditions.
 
 ---
 
@@ -152,21 +163,24 @@ conflicts (duplicate filename). Never return 500 for expected error conditions.
 
 On-demand workflows for recurring tasks. Invoke explicitly — they do not run automatically.
 
-| Workflow                                                                      | What it does                                                            |
-| ----------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| [code-quality-review.md](docs/code-quality-review.md)                         | Reviews implementation correctness, conventions, and test coverage gaps |
-| [test-suite-quality-review.md](docs/test-suite-quality-review.md)             | Reviews test simplicity, readability, and scope                         |
-| [feature-implementation-planning.md](docs/feature-implementation-planning.md) | Produces a structured plan before code is written                       |
-| [pr-description.md](docs/pr-description.md)                                   | Generates PR-ready description text from the final diff                 |
+When writing a new workflow or skill, see [docs/workflow-authoring.md](docs/workflow-authoring.md)
+for the structure conventions and links to the authoritative standards this library follows.
 
-### How to invoke
+| Workflow                                         | Purpose                                                                 |
+| ------------------------------------------------ | ----------------------------------------------------------------------- |
+| [docs/code-review.md](docs/code-review.md)       | Reviews implementation correctness, conventions, and test coverage gaps |
+| [docs/test-review.md](docs/test-review.md)       | Reviews test simplicity, readability, and scope                         |
+| [docs/feature-plan.md](docs/feature-plan.md)     | Produces a structured plan before code is written                       |
+| [docs/pr-description.md](docs/pr-description.md) | Generates PR-ready description text from the final diff                 |
+
+### Invocation
 
 ```
-Use docs/code-quality-review.md and review the changes on this branch against main.
+Use docs/code-review.md and review the changes on this branch against main.
 
-Use docs/test-suite-quality-review.md and review the existing test suite.
+Use docs/test-review.md and review the existing test suite.
 
-Use docs/feature-implementation-planning.md and plan the implementation for this feature.
+Use docs/feature-plan.md and plan the implementation for this feature.
 
 Use docs/pr-description.md and generate a PR description for this branch against main.
 ```

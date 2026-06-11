@@ -1,4 +1,4 @@
-# Feature Implementation Planning
+# Feature Plan
 
 ## Purpose
 
@@ -11,9 +11,9 @@ planning-heavy work — not for every small or isolated fix.
 
 ---
 
-## Before planning
+## Preparation
 
-Read `agents.md` to load project conventions, architecture constraints, and the existing data
+Read `AGENTS.md` to load project conventions, architecture constraints, and the existing data
 model. Read `SPEC.md` to understand the current feature set and confirmed design decisions.
 
 ---
@@ -71,7 +71,7 @@ Where the new code connects to existing systems:
 - Which existing Route Handlers or models are affected
 - Whether `authenticateRequest` needs to be called (all protected routes)
 - Whether the upload or download flow is touched (note ZIP streaming and file cleanup
-  requirements from `agents.md`)
+  requirements from `AGENTS.md`)
 - Whether new Sequelize associations or scopes are needed
 
 ### 7. Verification steps
@@ -86,7 +86,7 @@ How the change will be validated end to end:
 
 ---
 
-## Output format
+## Output
 
 Present the plan as a structured document using the section headings above. Be specific —
 name actual files, actual route paths, actual model fields. Vague plans produce vague

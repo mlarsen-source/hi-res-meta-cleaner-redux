@@ -1,4 +1,4 @@
-# Test Suite Quality Review
+# Test Review
 
 ## Purpose
 
@@ -6,12 +6,16 @@ Reviews the **quality and simplicity of the existing test suite** — whether te
 practical, and focused on behavior rather than implementation details. Flags overengineering,
 unnecessary abstraction, and tests that are too complex for their value.
 
-**Does not:** check for coverage gaps in newly written code (that is `code-quality-review.md`).
+**Does not:** check for coverage gaps in newly written code (that is `docs/code-review.md`).
 Does not run tests or generate new tests.
 
 ---
 
-## Review goal
+## Preparation
+
+Read `AGENTS.md` to load the project's testing rules before beginning.
+
+## Scope
 
 - Review tests that already exist in the codebase
 - Include all test types: Vitest unit, Vitest integration, React Testing Library, and Cypress E2E
@@ -22,7 +26,7 @@ basic and believable, and avoid looking overbuilt or overly abstracted.
 
 ---
 
-## Core review criteria
+## Review criteria
 
 ### 1. Simplicity
 
@@ -69,20 +73,20 @@ Specific to this codebase's Route Handler integration tests:
 
 ---
 
-## Specific things to flag
+## Findings to flag
 
 - Tests too complex for their value
 - Overly abstracted tests — excessive helper layers that obscure intent
 - Tests that assert implementation details instead of behavior
 - Repetitive tests that should be simplified, combined, or removed
 - Heavy mocking or setup where simpler approaches would work
-- Integration tests that mock the database (violates `agents.md` testing rules)
+- Integration tests that mock the database (violates `AGENTS.md` testing rules)
 - Cypress tests that do not visit real pages or interact with real elements
 - Tests that look machine-generated: too uniform, too exhaustive, or unnaturally polished
 
 ---
 
-## Required output format
+## Output
 
 ### High-level assessment
 
@@ -107,7 +111,7 @@ For each test file or logical group:
 - What is working well
 - What is too complex or unnecessary
 - What should be simplified, combined, or removed
-- Whether it follows the testing rules in `agents.md`
+- Whether it follows the testing rules in `AGENTS.md`
 
 ### Recommendations
 
