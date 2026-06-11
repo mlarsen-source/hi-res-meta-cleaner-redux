@@ -1,158 +1,172 @@
-# Working with Claude Code — Hi-Res Meta Cleaner Redux
+# Hi-Res Meta Cleaner Redux — Agent Reference
 
-This document describes how to use Claude Code effectively on this codebase: which workflows
-to follow, what to delegate versus what to own, and where to apply extra scrutiny.
-
----
-
-## Foundational Principle
-
-Claude Code works best when given a clear spec and explicit layer-by-layer tasks. It will fill
-in implementation details, write boilerplate, and iterate on failures — but it cannot derive
-intent from context alone. Always give it the what and the why; let it figure out the how.
+This file is the authoritative, agent-neutral reference for this codebase. Read it before
+starting any work. It covers commands, project layout, architecture constraints, conventions,
+and known tricky areas. The `docs/` directory contains on-demand workflow documents.
 
 ---
 
-## Workflow 1 — Spec-First for New Features
-
-Before adding any significant feature:
-
-1. Write or update `SPEC.md` to cover the feature: behavior, edge cases, data shape, API
-   contract, and test scenarios.
-2. Review the spec for ambiguity: anywhere vague enough that the agent could build something
-   you didn't mean is a gap to close before handing it over.
-3. Hand the spec to the agent with a clear scope boundary: "Implement X as described in SPEC.md
-   §N. Do not touch Y or Z."
-
-**Checkpoint:** Read the generated code before building on top of it. Structural mistakes are
-cheapest to fix before they become load-bearing.
-
----
-
-## Workflow 2 — Layer-by-Layer Implementation
-
-Build changes one layer at a time, bottom to top:
-
-```
-1. Database models / migrations
-2. Auth utilities and shared lib
-3. API route handlers
-4. Front-end components and hooks
-5. Tests
-```
-
-Tell the agent to complete one layer before starting the next. Do not let it partially implement
-two layers at once — integration errors compound quickly.
-
-**Spot-check each layer before proceeding:**
-
-- Database layer: does the schema match `SPEC.md §3` exactly?
-- Auth helpers: does the refresh fallback work correctly?
-- Route handlers: are error shapes consistent (`{ error: string }` everywhere)?
-- Upload handler: does it check within-batch duplicates before DB before writing disk?
-
----
-
-## Workflow 3 — Test-Driven Verification
-
-Supply the test scenarios; let the agent write the test code.
-
-The test case inventory lives in `SPEC.md §9`. Hand the agent specific scenarios:
-
-> "Write Vitest integration tests for `/api/upload`. Scenarios: (1) valid MP3 returns 201 with
-> metadata shape, (2) non-audio file returns 400, (3) duplicate filename returns 409. Do not
-> add scenarios I didn't list."
-
-**Before trusting test results, audit the tests:**
-
-- Does each test actually assert a meaningful condition, or does it just call the function?
-- Are integration tests calling the real route handler export, not a mock wrapper?
-- Are Cypress tests visiting real pages and interacting with real DOM elements?
-
-After adding any feature, run the full suite — not just the new tests.
-
----
-
-## Workflow 4 — Tricky Areas Requiring Extra Attention
-
-These areas of the codebase are most likely to go wrong. Apply extra scrutiny when touching them.
-
-### File upload (no multer)
-
-Route Handlers use `request.formData()` and `file.arrayBuffer()`. Multer does not work here.
-**Verify:** `app/api/upload/route.ts` has no multer import.
-
-### ZIP streaming (no `archive.pipe(res)`)
-
-The download service uses a `ReadableStream` adapter — archiver data events feed the controller,
-and the response is `new NextResponse(stream)`. See `app/lib/download/downloadService.ts`.
-**Verify:** Run the download endpoint against a real file and confirm the ZIP arrives intact
-and temp files are cleaned up afterward.
-
-### Sequelize singleton in dev
-
-`app/lib/db/sequelize.ts` attaches the instance to `global` to survive hot-reloads.
-**Verify:** Edit a file while dev is running, hot-reload, confirm no "too many connections" error.
-
-### node-id3 non-MP3 fallback
-
-`node-id3.write()` must only be called for `audio/mpeg` files. All other types fall back to
-`fs.copyFile`. The `type` field in the metadata table is the gate.
-**Verify:** Upload a FLAC file, download it, confirm it is byte-identical to the original.
-
----
-
-## Workflow 5 — Quality Gate
-
-No change is done until all four pass:
+## Commands
 
 ```bash
-npm run typecheck   # zero errors
-npm run lint        # zero warnings
-npm test            # all tests pass
-npm run build       # production build succeeds
+# Development
+npm run dev           # Start Next.js dev server on :3000
+
+# Quality gate (run all before declaring anything done)
+npm run format:check  # Prettier formatting check
+npm run typecheck     # tsc --noEmit — must pass with zero errors
+npm run lint          # ESLint with next/core-web-vitals + next/typescript
+npm run build         # Production build — must succeed
+
+# Testing
+npm test              # Run all Vitest unit + integration tests
+npm run test:watch    # Watch mode
+npm run cy:open       # Open Cypress interactively (needs dev server running)
+npm run cy:run        # Run Cypress headlessly (needs dev server running)
+npm run test:e2e      # Starts Next.js then runs Cypress (still needs DB)
+
+# Tooling
+npm run format        # Auto-fix formatting with Prettier
+npm run secrets       # Run gitleaks secret scan (requires gitleaks installed)
 ```
 
-Read the raw output — not just the agent's summary of it.
+---
+
+## Project Layout
+
+```
+app/
+  api/               Route Handlers — one folder per endpoint
+  components/        Shared React components
+  hooks/             Custom React hooks
+  lib/
+    auth/            JWT helpers, hashPassword, authenticateRequest
+    db/
+      sequelize.ts   Singleton connection (dev hot-reload safe)
+      models/        Sequelize models with TypeScript class syntax
+    metadata/        extractMetadata.ts, writeMetadata.ts
+    download/        downloadService.ts (archiver ZIP streaming)
+    utils/           formatters, objectHelpers, metadataFields, responseMappers
+    client/          fetchWithAuth, fileUtils (browser-only)
+  types/             Shared TypeScript interfaces
+  login/             /login page
+  register/          /register page
+  layout.tsx         Root layout with AuthProvider + NavBar
+  page.tsx           Home page (/ route)
+__tests__/           Vitest unit + integration tests
+cypress/             Cypress E2E tests
+docs/                Agent workflow documents
+uploads/             Uploaded audio files (git-ignored, created at runtime)
+temp/                Temp files during ZIP download (git-ignored, created at runtime)
+```
 
 ---
 
-## Effective Prompting Patterns
+## Architecture Decisions and Constraints
 
-**Layer handoff:**
+### Sequelize in Next.js dev mode
 
-> "The database models and auth utilities are complete. Now implement the shared lib:
-> responseMappers, objectHelpers, metadataFields, formatters, extractMetadata, writeMetadata,
-> downloadService. Do not touch route handlers or the front-end yet."
+`app/lib/db/sequelize.ts` attaches the Sequelize instance to `global` to survive hot-reloads.
+Do not create a new `Sequelize(...)` outside of this module.
 
-**Test scenario handoff:**
+### File uploads in Route Handlers
 
-> "Write Vitest unit tests for `hashPassword.ts`. Scenarios: (1) hashing produces a bcrypt
-> string, (2) `verifyPassword` returns true for correct input, (3) returns false for wrong input.
-> Do not add scenarios I didn't list."
+Use `await request.formData()` and `formData.getAll('files')`. Each entry is a Web API `File`.
+Call `file.arrayBuffer()` then `Buffer.from(...)` to write to disk. Do not use multer.
 
-**Tricky area direction:**
+### ZIP streaming in Route Handlers
 
-> "The download endpoint must stream a ZIP. `archive.pipe(res)` does not exist in Route
-> Handlers. Use a ReadableStream with a start(controller) function that drives the archiver:
-> enqueue on data, close on end, error on error. Return new NextResponse(stream)."
+Return a `new NextResponse(readableStream, { headers })`. Drive archiver events through a
+`ReadableStream` controller. See `app/lib/download/downloadService.ts` for the pattern.
 
-**Correction:**
+### Cookie handling
 
-> "The upload handler is using multer. That does not work in a Route Handler. Rewrite it using
-> request.formData() and file.arrayBuffer() as specified in SPEC.md §6."
+Set cookies by returning `NextResponse` with explicit `Set-Cookie` headers built by
+`serializeCookie()` in `app/lib/auth/jwt.ts`. Do not use `next/headers` cookies() for writes
+in Route Handlers — it is for Server Components.
+
+### Authentication
+
+Every protected route handler calls `authenticateRequest(request)` at the top. If
+`isAuthError(result)` is true, return the error response immediately. If
+`result.newAccessCookie` is set, include it in the response `Set-Cookie` header (silent
+refresh of expired access token).
+
+### node-id3 for metadata write
+
+Only writes ID3v2 (MP3). For non-MP3 files, `writeMetadata.ts` copies the file unchanged. The
+stored `type` field in the metadata table is used to decide. Do not re-encode audio.
+
+### Validation
+
+All request bodies are validated inside the route handler before touching the database or disk.
+Return 400 for bad input, 401 for auth failures, 404 for not-found (own resource), 409 for
+conflicts (duplicate filename). Never return 500 for expected error conditions.
 
 ---
 
-## What Requires Human Judgment
+## Code Conventions
 
-- **Intent** — The agent implements what the spec says, not what you meant. Gaps in the spec
-  produce plausible-but-wrong implementations.
-- **Browser verification** — The agent cannot confirm the UI works in a real browser. Test the
-  golden path manually after any front-end change.
-- **Test integrity** — The agent will write hollow tests if given no scenario list. Audit every
-  test file.
-- **Architectural reach** — The agent optimizes locally. It cannot see that a choice in the
-  upload handler will make integration tests harder three layers later.
-- **Domain verification** — Whether the ZIP actually plays in a media player; whether metadata
-  was written correctly into the file header — these require manual testing with real audio files.
+- TypeScript strict mode is enabled. Fix all type errors — do not use `any` or `@ts-ignore`.
+- No comments unless the why is non-obvious.
+- No `console.log` in production code paths.
+- Prefer `async/await` over promise chains.
+- Imports use `@/` alias for absolute paths from project root.
+- All API responses are JSON except the download endpoint which streams a ZIP.
+- Error responses always have shape `{ error: string }`.
+- Success responses for collections are arrays; for single mutations are `{ message: string }`.
+
+---
+
+## Testing Rules
+
+- Run `npm test` after every significant change. Tests must pass before moving on.
+- Integration tests for route handlers: import the `GET`/`POST` export directly, call with a
+  mock `NextRequest`, assert the `NextResponse`.
+- Do not mock the database in integration tests — use the real DB with a test schema. Set
+  `DATABASE_URL` to a test schema in the test environment.
+- Vitest environment is `jsdom` (configured in `vitest.config.ts`) — suitable for React hooks
+  and component tests without any per-file override.
+- Cypress E2E tests require both Next.js and the MySQL DB running.
+- Keep test timeouts aggressive: Vitest default is 10 s, Cypress command timeout is 8 s.
+
+---
+
+## Known Tricky Areas
+
+1. **ZIP streaming** — `archive.pipe(res)` does not exist in Route Handlers. See
+   `app/lib/download/downloadService.ts` for the `ReadableStream` adapter.
+2. **Sequelize hot-reload singleton** — Already handled in `sequelize.ts`. Do not change the
+   global attachment pattern.
+3. **node-id3 non-MP3 fallback** — Check `type` field before calling write; fall back to
+   `fs.copyFile` for non-MP3 files.
+4. **Upload body size** — `next.config.ts` raises the limit via
+   `experimental.serverActions.bodySizeLimit`. Route Handlers are governed by this in Next.js
+   App Router.
+5. **Duplicate detection** — Check within-batch duplicates first, then DB duplicates, before
+   writing any file to disk. On any failure, delete all files written so far in this request.
+
+---
+
+## Workflow Library
+
+On-demand workflows for recurring tasks. Invoke explicitly — they do not run automatically.
+
+| Workflow | What it does |
+|---|---|
+| [code-quality-review.md](docs/code-quality-review.md) | Reviews implementation correctness, conventions, and test coverage gaps |
+| [test-suite-quality-review.md](docs/test-suite-quality-review.md) | Reviews test simplicity, readability, and scope |
+| [feature-implementation-planning.md](docs/feature-implementation-planning.md) | Produces a structured plan before code is written |
+| [pr-description.md](docs/pr-description.md) | Generates PR-ready description text from the final diff |
+
+### How to invoke
+
+```
+Use docs/code-quality-review.md and review the changes on this branch against main.
+
+Use docs/test-suite-quality-review.md and review the existing test suite.
+
+Use docs/feature-implementation-planning.md and plan the implementation for this feature.
+
+Use docs/pr-description.md and generate a PR description for this branch against main.
+```

@@ -121,5 +121,8 @@ temp/            Temp files during ZIP export (git-ignored)
 ## Documentation
 
 - [SPEC.md](SPEC.md) — Full project specification: data model, API contract, edge cases, test inventory
-- [CLAUDE.md](CLAUDE.md) — Claude Code instructions for working in this codebase
-- [agents.md](agents.md) — Workflows and patterns for working on this codebase with Claude Code
+- [agents.md](agents.md) — Project reference and agent workflow library index
+- [docs/code-quality-review.md](docs/code-quality-review.md) — Code review workflow
+- [docs/test-suite-quality-review.md](docs/test-suite-quality-review.md) — Test suite review workflow
+- [docs/feature-implementation-planning.md](docs/feature-implementation-planning.md) — Feature planning workflow
+- [docs/pr-description.md](docs/pr-description.md) — PR description generation workflow
